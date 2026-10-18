@@ -1,1 +1,5 @@
-# -list
+此APP调用biliboard.uk的数据库和bilibili公开API
+biliboard.uk引用周榜，传说榜，年榜
+bilibili公开API引用投币，点赞等数据
+相互总结
+此APP由DeepSeekV4.1Flash开发
