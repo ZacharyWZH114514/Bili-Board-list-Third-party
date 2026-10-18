@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_background">#FF14121C</color>
+
+    <!-- 应用图标配色（6 套，可在「关于」页切换）：start 为左上、end 为右下 -->
+    <color name="ic_launcher_background_start">#FF3B2B6B</color>
+    <color name="ic_launcher_background_end">#FFE2559B</color>
+
+    <color name="ic_launcher_blue_start">#FF12335E</color>
+    <color name="ic_launcher_blue_end">#FF2E8BE6</color>
+
+    <color name="ic_launcher_teal_start">#FF0C3B3A</color>
+    <color name="ic_launcher_teal_end">#FF1FBFA8</color>
+
+    <color name="ic_launcher_amber_start">#FF4A2A05</color>
+    <color name="ic_launcher_amber_end">#FFF2A93B</color>
+
+    <color name="ic_launcher_crimson_start">#FF4A0F1C</color>
+    <color name="ic_launcher_crimson_end">#FFE23B5A</color>
+
+    <color name="ic_launcher_mono_start">#FF23252B</color>
+    <color name="ic_launcher_mono_end">#FF6E7380</color>
+</resources>

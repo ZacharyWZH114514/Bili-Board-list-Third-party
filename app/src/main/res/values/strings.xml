@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 简体中文。英文在默认的 values/ 里。 -->
+<resources>
+    <string name="app_name">Vocaloid List</string>
+    <string name="loading_snapshot">正在载入榜单数据…</string>
+
+    <!-- 底部导航 -->
+    <string name="tab_home">榜单</string>
+    <string name="tab_search">搜索</string>
+    <string name="tab_following">关注</string>
+    <string name="tab_favorites">收藏</string>
+
+    <!-- 顶栏标题 -->
+    <string name="title_issues">榜单</string>
+    <string name="title_ranking">第 %1$d 期</string>
+    <string name="title_song_detail">曲目详情</string>
+    <string name="title_search">搜索术曲</string>
+    <string name="title_following">关注</string>
+    <string name="title_favorites">我的收藏</string>
+    <string name="title_about">关于</string>
+    <string name="title_app_icon">应用图标</string>
+    <string name="title_settings">设置</string>
+    <string name="title_update_interval">自定义更新时间</string>
+    <string name="title_ai_settings">AI 分析</string>
+
+    <!-- 无障碍描述 -->
+    <string name="cd_back">返回</string>
+    <string name="cd_settings">设置</string>
+
+    <!-- 提示条 -->
+    <string name="toast_favorited">已收藏</string>
+    <string name="toast_unfavorited">已取消收藏</string>
+    <string name="toast_following">已关注 %1$s</string>
+    <string name="toast_unfollowed">已取消关注 %1$s</string>
+    <string name="toast_favorites_cleared">已清空收藏</string>
+    <string name="toast_import_none">没有新增：文件里的 %1$d 首都已收藏</string>
+    <string name="toast_import_ok">已导入 %1$d 首（文件共 %2$d 首）</string>
+
+    <!-- 新手引导 -->
+    <string name="onboard_skip">跳过</string>
+    <string name="onboard_next">下一步</string>
+    <string name="onboard_start">开始使用</string>
+    <string name="onboard_open_ai">现在就去填 Key</string>
+    <string name="onboard_1_title">Vocaloid List</string>
+    <string name="onboard_1_body">浏览 biliboard.uk 的术力口周榜：榜单、曲目详情、全站搜索、收藏，以及每首歌的 AI 解读。\n\n这是一个第三方客户端，与 Biliboard 官方无关。</string>
+    <string name="onboard_1_note">数据版权归原站与各 P主 所有</string>
+    <string name="onboard_2_title">数据内置，不实时</string>
+    <string name="onboard_2_body">完整榜单已经打包在应用里，不联网也能浏览和搜索。\n\n之后每 3 天做一次增量更新，只拉新增的期数。周期可以在设置里改，也能设成「仅手动更新」，那样应用绝不会自己联网。\n\n所以刚发布的一期不会立刻出现 —— 这是设计如此，不是坏了。</string>
+    <string name="onboard_2_note">设置 → 自定义更新时间</string>
+    <string name="onboard_3_title">AI 功能是选配的</string>
+    <string name="onboard_3_body">「AI 分析周榜」和「AI 解读这首歌」用的是你自己的 API Key，应用不内置、不上传、不代理。\n\n不填完全不影响其它功能。填了之后，解读会先用豆包搜索联网查歌词与背景，再让 DeepSeek 写出来。</string>
+    <string name="onboard_3_note">Key 只保存在本机</string>
+    <string name="onboard_4_title">收藏记得备份</string>
+    <string name="onboard_4_body">收藏只存在本机，换手机或重装就会丢。\n\n收藏页顶部有「导出」，会写出一份可读的 JSON 备份；换机后用「导入」就能找回，而且是只增不减的合并，不会覆盖已有的。</string>
+    <string name="onboard_4_note">收藏 → 导出 / 导入</string>
+    <!-- 列表行与共享组件 -->
+    <string name="widget_loading">加载中…</string>
+    <string name="unknown_producer">未知P主</string>
+    <string name="hit_best_rank">最高 #%1$d</string>
+    <string name="hit_chart_weeks">上榜 %1$d 期</string>
+    <string name="hit_not_charted">未上榜</string>
+    <!-- 统计标签 -->
+    <string name="stat_views">播放</string>
+    <string name="stat_likes">点赞</string>
+    <string name="stat_coins">投币</string>
+    <string name="stat_favorites">收藏</string>
+</resources>

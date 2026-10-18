@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 均衡器式上升柱状条：象征「榜单」 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M30,62h8v18h-8z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M44,52h8v28h-8z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M58,42h8v38h-8z" />
+    <path
+        android:fillColor="#FFFFD166"
+        android:pathData="M72,32h8v48h-8z" />
+</vector>
