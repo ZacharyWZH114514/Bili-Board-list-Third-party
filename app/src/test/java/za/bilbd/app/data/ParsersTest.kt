@@ -96,6 +96,32 @@ class ParsersTest {
     }
 
     @Test
+    fun issues_readsVideoPubdateAndPrefersItForTheLabelDate() {
+        // 网站给每期标的日期取 video_pubdate，没有才用 end_date；
+        // app 过去只认 end_date，所以列表里的日期总比网站早几天。
+        val issues = Parsers.parseIssues(
+            """[{"issue_id":127,"year":2026,"week":46,"video_count":20,""" +
+                """"end_date":1794240000,"video_pubdate":1794391200,"video_bvid":"BV1xx"}]""",
+            boardId = 1,
+            boardName = "周榜",
+        )
+        val i = issues[0]
+        assertEquals(1_794_391_200L, i.videoPubdate)
+        assertEquals(1_794_391_200L, i.labelDate)
+    }
+
+    @Test
+    fun issues_labelDateFallsBackToEndDateWhenPubdateMissing() {
+        val issues = Parsers.parseIssues(
+            """[{"issue_id":1,"year":2026,"week":1,"video_count":20,"end_date":123}]""",
+            boardId = 1,
+            boardName = "周榜",
+        )
+        assertEquals(0L, issues[0].videoPubdate)
+        assertEquals(123L, issues[0].labelDate)
+    }
+
+    @Test
     fun issues_blankVideoBvidBecomesNull() {
         // 空串要归一成 null，否则界面会拿空串去拼 URL
         val issues = Parsers.parseIssues(

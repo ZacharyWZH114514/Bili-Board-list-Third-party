@@ -33,9 +33,12 @@ object AiProviders {
             id = "deepseek",
             label = "DeepSeek",
             baseUrl = "https://api.deepseek.com",
-            models = listOf("deepseek-chat", "deepseek-reasoner"),
+            // 旧的 deepseek-chat / deepseek-reasoner 官方已停用（2026-07-24），
+            // 现在只有 deepseek-flash 支持自带联网搜索
+            models = listOf("deepseek-flash", "deepseek-v4-pro"),
             keyUrl = "https://platform.deepseek.com/",
-            hint = "deepseek-chat 更快更省；deepseek-reasoner 会先推理再回答，更慢但分析更细。",
+            hint = "deepseek-flash 更快更省，也是唯一支持「DeepSeek 内置联网搜索」的模型；" +
+                "deepseek-v4-pro 更慢但分析更细，不支持内置搜索。",
         ),
         AiProvider(
             id = "openai",

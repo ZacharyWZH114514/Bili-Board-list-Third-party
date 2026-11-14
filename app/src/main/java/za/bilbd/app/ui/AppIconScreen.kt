@@ -107,6 +107,7 @@ fun AppIconScreen(dark: Boolean, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
+            .barsInset()
             .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {

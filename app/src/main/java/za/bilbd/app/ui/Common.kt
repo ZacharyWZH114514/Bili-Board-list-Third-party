@@ -51,6 +51,19 @@ fun formatDate(epochSeconds: Long): String =
     if (epochSeconds <= 0) "—" else dateFmt.format(Date(epochSeconds * 1000))
 
 /**
+ * 期号日期：**和网站保持同一口径**。
+ *
+ * biliboard 给每期标的日期取的是榜单视频发布时间（`video_pubdate || end_date`），
+ * 而 app 以前只显示 `end_date`（统计截止），所以列表里的日期总比网站早几天。
+ * 再加上用户可调的天数偏移（默认 0），个别期站内标错时也能手动对齐。
+ */
+fun formatIssueDate(issue: za.bilbd.app.data.Issue, offsetDays: Int): String {
+    val base = issue.labelDate
+    if (base <= 0L) return "—"
+    return formatDate(base + offsetDays * 86_400L)
+}
+
+/**
  * 大数字的紧凑写法。
  *
  * 这不是「翻译」问题而是**记数习惯**问题：中文按 万 / 亿 进位，英文按 K / M / B。

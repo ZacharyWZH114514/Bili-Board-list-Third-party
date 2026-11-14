@@ -134,6 +134,7 @@ private fun IdentityColumn(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
+            .barsInset()
             .padding(horizontal = 24.dp, vertical = 12.dp),
     ) {
         // 点图标即可进入图标设置
@@ -227,6 +228,7 @@ private fun InfoColumn(dark: Boolean) {
         Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
+            .barsInset()
             .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

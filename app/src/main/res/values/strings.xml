@@ -64,4 +64,5 @@
     <string name="stat_likes">点赞</string>
     <string name="stat_coins">投币</string>
     <string name="stat_favorites">收藏</string>
+    <string name="keep_alive_desc">仅用于让 Vocaloid List 在后台多存活一会儿，以便及时发现新一期榜单。本服务不读取屏幕内容，也不操作任何其他应用。</string>
 </resources>

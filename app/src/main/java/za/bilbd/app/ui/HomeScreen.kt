@@ -52,7 +52,7 @@ fun HomeScreen(
 
         else -> LazyColumn(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+            contentPadding = barsPadded(PaddingValues(horizontal = 12.dp, vertical = 12.dp)),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item { UpdateCard(state, dark, onUpdate, Modifier.cascade(0)) }

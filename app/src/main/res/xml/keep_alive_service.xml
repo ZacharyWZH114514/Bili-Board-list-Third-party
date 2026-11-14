@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  保活用的无障碍服务配置。
+
+  刻意把权限压到最小：
+    · 不读取窗口内容（canRetrieveWindowContent=false）—— 本服务不需要看任何界面
+    · 只订阅窗口状态变化（系统要求至少声明一类事件）
+    · 不做手势/开关控制
+  这样它在系统「无障碍」页里的权限描述也是最小的一条。
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault"
+    android:canRetrieveWindowContent="false"
+    android:description="@string/keep_alive_desc"
+    android:notificationTimeout="100"
+    android:settingsActivity="za.bilbd.app.MainActivity" />

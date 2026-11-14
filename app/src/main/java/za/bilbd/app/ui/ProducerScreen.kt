@@ -52,7 +52,7 @@ fun ProducerScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(bottom = 16.dp),
+        contentPadding = barsPadded(PaddingValues(bottom = 16.dp)),
         verticalArrangement = Arrangement.spacedBy(9.dp),
     ) {
         item(key = "header") {

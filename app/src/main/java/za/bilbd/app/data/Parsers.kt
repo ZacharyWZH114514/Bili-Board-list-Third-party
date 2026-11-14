@@ -99,6 +99,8 @@ object Parsers {
         val videoCount = ij.int("videoCount", "video_count")
         val endDate = ij.long("endDate", "end_date", "issueEndDate")
         val videoBvid = ij.str("videoBvid", "video_bvid").ifBlank { null }
+        // 网站标每期日期用的是 video_pubdate（没有才用 end_date），这里也存一份
+        val videoPubdate = ij.long("videoPubdate", "video_pubdate")
 
         val rankArr = ij.optJSONArray("rankings") ?: JSONArray()
         val entries = ArrayList<RankEntry>(rankArr.length())
@@ -106,7 +108,9 @@ object Parsers {
             val rj = rankArr.optJSONObject(ri) ?: continue
             entries.add(parseEntry(rj, creditCache))
         }
-        return Issue(boardId, boardName, issueId, year, week, videoCount, endDate, videoBvid, entries)
+        return Issue(
+            boardId, boardName, issueId, year, week, videoCount, endDate, videoBvid, entries, videoPubdate,
+        )
     }
 
     private fun parseEntry(o: JSONObject, cache: HashMap<String, List<Credit>>): RankEntry {
@@ -172,6 +176,7 @@ object Parsers {
                     endDate = o.long("end_date", "endDate"),
                     videoBvid = o.str("video_bvid", "videoBvid").ifBlank { null },
                     entries = emptyList(),
+                    videoPubdate = o.long("video_pubdate", "videoPubdate"),
                 )
             )
         }

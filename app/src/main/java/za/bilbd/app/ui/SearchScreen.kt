@@ -47,7 +47,9 @@ fun SearchScreen(vm: AppViewModel, dark: Boolean, onOpenSong: (String) -> Unit) 
     val state by vm.state.collectAsStateWithLifecycle()
     val biliMap by vm.biliVideos.collectAsStateWithLifecycle()
 
-    Column(Modifier.fillMaxWidth()) {
+    // 搜索框是**固定头部**，不在滚动容器里，必须自己让出顶栏高度，
+    // 否则会顶到状态栏下面和标题栏叠在一起（曾经出现过双标题）。
+    Column(Modifier.fillMaxWidth().padding(top = LocalBarsInsets.current.top)) {
         GlassSearchField(
             value = query,
             dark = dark,
@@ -62,7 +64,7 @@ fun SearchScreen(vm: AppViewModel, dark: Boolean, onOpenSong: (String) -> Unit) 
 
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
+            contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp + LocalBarsInsets.current.bottom),
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             item {

@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import za.bilbd.app.data.AiConfig
+import za.bilbd.app.data.SearchMode
 import za.bilbd.app.data.AiProvider
 import za.bilbd.app.data.AiProviders
 import za.bilbd.app.data.DeepSeekApi
@@ -68,6 +69,7 @@ fun AiSettingsScreen(
     var showKey by remember { mutableStateOf(false) }
     var showDoubaoKey by remember { mutableStateOf(false) }
     var persona by remember { mutableStateOf(config.persona) }
+    var searchMode by remember { mutableStateOf(config.searchMode) }
 
     // 申请 Key 的入口：直接跳系统浏览器
     val uriHandler = LocalUriHandler.current
@@ -81,6 +83,7 @@ fun AiSettingsScreen(
             model = model,
             doubaoApiKey = doubaoKey.trim(),
             persona = persona,
+            searchMode = searchMode,
         )
     )
 
@@ -88,6 +91,7 @@ fun AiSettingsScreen(
         modifier = modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
+            .barsInset()
             .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -302,11 +306,47 @@ fun AiSettingsScreen(
             )
         }
 
+        // 联网搜索：DeepSeek 2026-11 起自带 deepseek_web_search（服务端搜、服务端引，
+        // 复用模型那把 Key），所以不再强制用户去申请豆包 Key
         GlassSurface(
             dark = dark,
             shape = RoundedCornerShape(20.dp),
             contentPadding = PaddingValues(16.dp),
             modifier = Modifier.cascade(3).fillMaxWidth(),
+        ) {
+            SectionTitle("联网搜索")
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SearchMode.entries.forEach { mode ->
+                    Chip(
+                        label = mode.label,
+                        selected = searchMode == mode,
+                        dark = dark,
+                        onClick = { searchMode = mode; save() },
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = when (searchMode) {
+                    SearchMode.Off ->
+                        "不联网，只靠模型自己的知识。解读里会说明资料有限，容易编。"
+                    SearchMode.DeepSeek ->
+                        "用 DeepSeek 自带的联网搜索：搜索和抓取都在服务端完成，" +
+                            "只需要上面那把 Key，回答会附来源。需要 deepseek-flash 模型。"
+                    SearchMode.Doubao ->
+                        "先把资料搜出来再交给模型，需要单独申请豆包搜索 Key（下面这一段）。"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        GlassSurface(
+            dark = dark,
+            shape = RoundedCornerShape(20.dp),
+            contentPadding = PaddingValues(16.dp),
+            modifier = Modifier.cascade(4).fillMaxWidth(),
         ) {
             SectionTitle("豆包搜索 API Key")
             Spacer(Modifier.height(8.dp))

@@ -80,15 +80,22 @@ fun SongDetailScreen(
     // 先让它只依赖列表这一种布局机制，把变量减到最少。
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(
-            horizontal = if (window.isWide) 16.dp else 14.dp,
-            vertical = 14.dp,
+        // 栏是覆盖层（顶栏/底栏浮在内容上），所以这一页也必须按实测栏高让位，
+        // 否则封面会被标题栏盖掉一截、最后一张卡片会被底栏压住。v3.2 补上。
+        contentPadding = barsPadded(
+            PaddingValues(
+                start = if (window.isWide) 16.dp else 14.dp,
+                end = if (window.isWide) 16.dp else 14.dp,
+                bottom = 14.dp,
+            )
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         // 平板（Expanded）走两栏：左边封面、右边指标与操作，省掉一路往下滚。
         // 只把**头部这几块**并排，其余仍然是同一条 LazyColumn ——
         // 这样「整页只有一种布局机制」这个约束还成立，不会退回以前那种叠层写法。
+        // 这套两栏有测试钉住（SongDetailLayoutTest.expanded_coverAndStatsAreSideBySide），
+        // 不要凭观感随手改成单栏。
         if (window.isExpanded) {
             item(key = "hero") {
                 Row(

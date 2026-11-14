@@ -28,6 +28,14 @@ class LiveStore(context: Context) {
         get() = prefs.getBoolean(KEY_LAST_OK, false)
         set(value) = prefs.edit().putBoolean(KEY_LAST_OK, value).apply()
 
+    /**
+     * 已经通知过的最新期号。0 表示还没记录过 —— 第一次跑只记不通知，
+     * 免得用户刚打开开关就收到一条「你看，第 127 期」。
+     */
+    var lastNotifiedIssue: Int
+        get() = prefs.getInt(KEY_LAST_NOTIFIED, 0)
+        set(value) = prefs.edit().putInt(KEY_LAST_NOTIFIED, value).apply()
+
     fun readSnapshot(): String? = readFile(snapshotFile)
 
     fun readCatalog(): String? = readFile(catalogFile)
@@ -61,6 +69,7 @@ class LiveStore(context: Context) {
         const val PREFS = "biliboard_update"
         const val KEY_LAST_UPDATE = "last_update_at"
         const val KEY_LAST_OK = "last_update_ok"
+        const val KEY_LAST_NOTIFIED = "last_notified_issue"
         const val SNAPSHOT_FILE = "live_snapshot.json"
         const val CATALOG_FILE = "live_catalog.json"
     }

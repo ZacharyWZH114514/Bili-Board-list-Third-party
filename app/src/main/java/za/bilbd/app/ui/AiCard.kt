@@ -3,6 +3,7 @@ package za.bilbd.app.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +28,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import za.bilbd.app.data.ChatMessage
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.clip
 
 /**
  * AI 结果卡片，榜单分析（按「期」）与单曲解读（按「曲」）共用。
@@ -38,6 +43,9 @@ import za.bilbd.app.data.ChatMessage
  *     而 LazyColumn 给 item 的主轴约束是无限高，嵌套可滚动组件会直接抛异常。
  *     结果本来就不长，让它自然撑开、由外层列表滚动即可。
  */
+/** 引用最多列几条，免得把卡片撑太长 */
+private const val MAX_CITATIONS = 5
+
 /** AI 追问区的状态打包，避免每个页面传一堆参数 */
 data class AiChatState(
     /** 分析出结果后才启用 */
@@ -120,11 +128,46 @@ fun AiResultCard(
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(8.dp))
+                // 展示的是**请求的模型**（设置里选的那个）。中转站/网关可能无视它、
+                // 自己路由到别的模型，这时把服务端实际用的那个也标出来，
+                // 免得出现「设置是 pro、这里却写 flash」这种对不上的情况。
+                val served = state.servedModel
                 Text(
-                    text = "由 ${state.model} 生成 · 内容仅供参考",
+                    text = buildString {
+                        append("由 ${state.model} 生成")
+                        if (served.isNotBlank() && served != state.model) {
+                            append("（服务端实际返回：$served）")
+                        }
+                        append(" · 内容仅供参考")
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+
+                // 联网搜索引用：DeepSeek 自带搜索时由服务端给出，点一下可以打开原文
+                if (state.citations.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "参考来源 ${state.citations.size} 条",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    state.citations.take(MAX_CITATIONS).forEach { c ->
+                        val uri = LocalUriHandler.current
+                        Text(
+                            text = "· " + (c.title.ifBlank { c.url }),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { runCatching { uri.openUri(c.url) } }
+                                .padding(vertical = 3.dp),
+                        )
+                    }
+                }
             }
 
             is AiUiState.Failed -> {

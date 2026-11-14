@@ -38,7 +38,7 @@ val WindowWidth.homeMaxWidth: Dp?
         WindowWidth.Expanded -> 1240.dp
     }
 
-/** 曲目详情：宽屏下分两栏 */
+/** 曲目详情：宽屏下头部走两栏（左封面 / 右指标+操作，有测试钉住） */
 val WindowWidth.detailMaxWidth: Dp?
     get() = when (this) {
         WindowWidth.Compact -> null

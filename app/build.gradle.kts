@@ -16,9 +16,15 @@ android {
         minSdk = 26
         targetSdk = 37
         // versionName 是用户在「关于」页看到的版本号；
-        // versionCode 只给系统判断「哪个更新」，取 1145 让它跟 1.145 对得上，以后也好加。
-        versionCode = 1145
-        versionName = "1.145"
+        // versionCode 只给系统判断「哪个更新」，必须严格递增（1.145 那版是 1145，所以这里取 1200）。
+        // 代码里不要再硬编码版本号，统一读 BuildConfig.VERSION_NAME。
+        versionCode = 4300
+        versionName = "4.3"
+    }
+
+    buildFeatures {
+        // 让启动日志等处能读到 BuildConfig.VERSION_NAME，避免版本号散落在多个文件里
+        buildConfig = true
     }
 
     buildTypes {
@@ -27,8 +33,9 @@ android {
             isMinifyEnabled = false
         }
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // 开了 haze 之后包体是首要约束：R8 会把 Compose/Coil/haze 未用到的部分全部裁掉
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // 使用 debug 签名，保证产出的 APK 可直接安装验证
             signingConfig = signingConfigs.getByName("debug")
@@ -70,6 +77,7 @@ android {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.19.1")
+    implementation("androidx.work:work-runtime-ktx:2.10.5")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
@@ -81,6 +89,9 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core:1.7.8")
 
+    // 液体玻璃：真实折射（AGSL 采样背景）
+    implementation("dev.chrisbanes.haze:haze:2.0.1")
+    implementation("dev.chrisbanes.haze:haze-glass:2.0.1")
     implementation("io.coil-kt.coil3:coil-compose:3.6.3")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")
 
@@ -160,6 +171,64 @@ val guardGlassTheme by tasks.registering {
 // 所有构建前先跑这条规则（preBuild 是 AGP 为每个变体都建立的任务）
 tasks.matching { it.name == "preBuild" }.configureEach {
     dependsOn(guardGlassTheme)
+}
+
+// ---------------------------------------------------------------------------
+// 第二条硬规则：每个页面都必须让位给「覆盖层」栏。
+//
+// 顶栏/底栏现在是浮在内容之上的覆盖层，页面必须自己消费 LocalBarsInsets：
+//   · LazyColumn  → contentPadding = barsPadded(...)
+//   · verticalScroll 的 Column → .barsInset()（必须写在 verticalScroll 之后）
+//   · 不在滚动容器里的固定头部 → padding(top = LocalBarsInsets.current.top)
+//
+// 漏掉这一条不会报错、不会崩，只会让首尾内容被玻璃盖住——只有用户能发现。
+// 曲目详情页就是这么漏掉的（v3.1 之前封面被标题栏盖掉一截、最后一张卡片压在底栏下面）。
+// ---------------------------------------------------------------------------
+
+val guardScreenInsets by tasks.registering {
+    group = "verification"
+    description = "每个 *Screen.kt 都必须消费 LocalBarsInsets（barsPadded / barsInset / LocalBarsInsets）"
+    inputs.dir(uiSourceDir).withPropertyName("uiSources")
+
+    doLast {
+        val consumers = Regex("""\bbarsPadded\s*\(|\bbarsInset\s*\(|\bLocalBarsInsets\b""")
+        // 新手引导是「提前返回」的独立全屏页面：那时两条栏都还没渲染，没有要让位的对象
+        val exempt = setOf("OnboardingScreen.kt")
+        val offenders = mutableListOf<String>()
+
+        uiSourceDir.walkTopDown()
+            .filter { it.isFile && it.name.endsWith("Screen.kt") && it.name !in exempt }
+            .sortedBy { it.name }
+            .forEach { file ->
+                // 去掉注释行再判断，避免注释里提一句 barsPadded 就蒙混过关
+                val code = file.readLines()
+                    .filterNot { line ->
+                        val t = line.trim()
+                        t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")
+                    }
+                    .joinToString("\n")
+                if (!consumers.containsMatchIn(code)) offenders += file.name
+            }
+
+        if (offenders.isNotEmpty()) {
+            throw GradleException(
+                buildString {
+                    appendLine("这些页面没有给覆盖层栏让位：")
+                    offenders.forEach { appendLine("  · $it") }
+                    appendLine()
+                    appendLine("栏是覆盖层，页面必须自己消费 LocalBarsInsets，否则首尾内容会被玻璃盖住：")
+                    appendLine("  · LazyColumn → contentPadding = barsPadded(base)")
+                    appendLine("  · verticalScroll 的 Column → Modifier.barsInset()（写在 verticalScroll 之后）")
+                    appendLine("  · 固定头部 → padding(top = LocalBarsInsets.current.top)")
+                    appendLine("确实不需要让位的页面，加进本规则的 exempt 白名单并写明理由。")
+                }
+            )
+        }
+    }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(guardScreenInsets)
 }
 
 // ---------------------------------------------------------------------------

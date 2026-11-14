@@ -27,6 +27,8 @@ fun IssuesScreen(
     board: Board?,
     dark: Boolean,
     onOpenIssue: (Int) -> Unit,
+    /** 周榜日期偏移（天），见 SettingsStore.setDateOffsetDays */
+    dateOffsetDays: Int = 0,
 ) {
     if (board == null) {
         MessagePane("找不到该榜单")
@@ -35,7 +37,7 @@ fun IssuesScreen(
     val issues = board.sortedIssues
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+        contentPadding = barsPadded(PaddingValues(horizontal = 12.dp, vertical = 12.dp)),
         verticalArrangement = Arrangement.spacedBy(9.dp),
     ) {
         item {
@@ -63,6 +65,7 @@ fun IssuesScreen(
                 dark = dark,
                 onClick = { onOpenIssue(issue.issueId) },
                 modifier = Modifier.cascade(index + 1),
+                dateOffsetDays = dateOffsetDays,
             )
         }
     }
@@ -74,6 +77,7 @@ private fun IssueRow(
     dark: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    dateOffsetDays: Int = 0,
 ) {
     val champ = issue.champion
     GlassSurface(
@@ -124,7 +128,8 @@ private fun IssueRow(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = formatDate(issue.endDate),
+                    // 和网站同一口径（榜单视频发布时间），不再是统计截止
+                    text = formatIssueDate(issue, dateOffsetDays),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

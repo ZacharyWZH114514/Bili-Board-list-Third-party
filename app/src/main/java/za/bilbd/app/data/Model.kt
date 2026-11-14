@@ -77,10 +77,21 @@ data class Issue(
     val endDate: Long,
     val videoBvid: String?,
     val entries: List<RankEntry>,
+    /**
+     * 该期榜单视频在 B 站的发布时间。
+     *
+     * 网站给每期标的日期用的就是它（`video_pubdate || end_date`），
+     * 而 app 过去只显示 [endDate]（统计截止），比网站早几天，
+     * 所以列表里那一列日期要和网站对齐就必须用这个字段。
+     */
+    val videoPubdate: Long = 0L,
 ) {
     val label: String get() = "第 $issueId 期"
     val period: String get() = "$year 年第 $week 周"
     val champion: RankEntry? get() = entries.minByOrNull { it.rank }
+
+    /** 和网站一致的那一期日期：优先发布时间，没有才退回统计截止 */
+    val labelDate: Long get() = if (videoPubdate > 0L) videoPubdate else endDate
 }
 
 /** 一个榜单（周榜 / 传说曲周榜 / 年榜） */

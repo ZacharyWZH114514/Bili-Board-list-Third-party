@@ -71,6 +71,24 @@ object AppLog {
         }
     }
 
+    /**
+     * 记录一次未捕获异常。
+     *
+     * 由 `BiliBoardApplication` 里装的全局 handler 调用。闪退是最需要日志的场景，
+     * 而崩溃发生时进程马上就没了，所以这里必须**同步写盘**（add 内部就是 appendText）。
+     * 栈太长会把日志撑爆，只取前 12 帧、用 ` | ` 拼成一行。
+     */
+    @Synchronized
+    fun recordCrash(error: Throwable) {
+        add("崩溃", "${error.javaClass.simpleName}: ${error.message}")
+        val frames = error.stackTraceToString()
+            .lineSequence()
+            .filter { it.isNotBlank() }
+            .take(12)
+            .joinToString(" | ")
+        add("崩溃", frames)
+    }
+
     /** 导出用的纯文本 */
     /**
      * 导出用的纯文本。

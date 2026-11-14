@@ -90,7 +90,7 @@ powershell -File build.ps1 -Task ":app:assembleRelease"
 | 关于 | 应用图标 / 名称 / 作者 / 版本 + 应用说明 + 数据来源 + **开源许可** |
 | 更改图标 | 6 套预设配色（换真实启动图标）+ 用自定义图片创建桌面入口 |
 | 自定义更新时间 | 仅手动 / **每天 18:00** / 1 / 3（默认）/ 7 / 14 / 30 天；同页显示上次更新、下次自动更新、已应用增量，并有「立即更新一次」 |
-| AI 分析 | DeepSeek Key（周榜分析 + 单曲解读）、模型、接口地址、豆包搜索 Key，各带申请入口 |
+| AI 分析 | DeepSeek Key（周榜分析 + 单曲解读）、模型、接口地址；联网搜索可选 **DeepSeek 内置**（deepseek-flash 自带搜索、附来源，复用同一把 Key）/ 豆包 / 关闭 |
 | 重看新手引导 | 再看一遍首启的那 4 页 |
 | 外观 | 跟随系统 / 浅色 / 深色 |
 
@@ -163,7 +163,9 @@ powershell -File build.ps1 -Task ":app:assembleRelease"
 - 结果按 `bvid` 缓存在内存里，同一首不会重复消耗额度，可手动清除。
 - 没配豆包 Key 时仍能解读，但只会说「资料有限」——不建议。
 
-**两个 Key 都由用户自己填**（设置 → AI 分析）：DeepSeek Key 用于写周榜分析 + 单曲解读，豆包搜索 Key 用于联网查资料。应用不内置、不代理、不上传。
+**Key 都由用户自己填**（设置 → AI 分析）：模型那把 Key 用于写周榜分析 + 单曲解读；联网搜索默认走 **DeepSeek 自带的 `deepseek_web_search`**（2026-11 的全家桶应用 API，搜索与抓取都在服务端完成、复用同一把 Key，回答附来源），也可以改回豆包搜索或关闭。应用不内置、不代理、不上传。
+
+> 模型名注意：`deepseek-chat` / `deepseek-reasoner` 这两个旧名字官方已停用，现在用 `deepseek-flash`（也只有它支持内置联网搜索）与 `deepseek-v4-pro`。老版本存下的旧模型名会在读取设置时自动迁移成 `deepseek-flash`。
 
 ### 豆包搜索（Custom 版）接口要点
 
@@ -215,12 +217,14 @@ HTTP 用 JDK 自带的 `HttpURLConnection` 而不是 OkHttp：应用只是通过
 
 其它细节：
 
-- 侧边导航栏顶部放应用图标，用玻璃底 + 右缘高光，与整体风格一致。
+- 侧边导航栏是**只包住图标的短胶囊**（顶部放应用图标），不是通高的一根柱子；玻璃底 + 镜面描边，与顶栏同一套观感。
 - 宽屏下所有内容居中并限制最大宽度，避免一行从屏幕这头拉到那头；首页因为要横排卡片单独放宽到 1240dp。
 - 清单里声明了 `resizeableActivity` 与 `supports-screens`，支持分屏 / 自由窗口；Activity 通过 `configChanges` 自行处理尺寸变化，不重建。
 - 未锁定屏幕方向，横竖屏都会重新排版。
 
 > **曲目详情页的平板两栏布局已移除**，现在所有档位都是居中单栏。原因是这一页曾被反馈排版错乱，两栏需要把内容塞回 `Row + Column` 的嵌套里，而那正是容易再出问题的地方。等单栏版本稳定后再考虑加回来。
+
+> **v3.3 更正**：上面这句和代码不一致——「整页只有 LazyColumn」是真的，但**头部仍然在 Expanded 下走两栏**（左封面 / 右指标+操作），并且有测试钉住（`SongDetailLayoutTest.expanded_coverAndStatsAreSideBySide`）。所以表格里曲目详情那一列应理解为「正文单栏、头部两栏」。
 
 ## 功能
 
@@ -234,9 +238,13 @@ HTTP 用 JDK 自带的 `HttpURLConnection` 而不是 OkHttp：应用只是通过
 | 收藏 | 本地收藏曲目，SharedPreferences 持久化；收藏/取消收藏有 Snackbar 提示 |
 | 关于 | 上半屏是应用图标、名称、作者（Zachary & 大肥鱼）与版本号；下半屏是应用说明与数据来源（biliboard.uk，可一键打开） |
 | 应用图标 | 从「设置 → 更改图标」或「关于」页的图标进入：6 套预设配色（切换真实启动图标）+ 用自定义图片创建桌面入口 |
-| 设置 | 顶栏齿轮进入：关于 / 更改图标 / 自定义更新时间 / AI 分析 |
+| 设置 | 顶栏齿轮进入：关于 / 更改图标 / 自定义更新时间 / 外观 / **周榜日期偏移** / **新一期提醒** / AI 分析 / 日志 |
 
-## 构建期硬规则（`guardGlassTheme`）
+## 构建期硬规则
+
+「约定」和「保证」的分界：做成构建期检查，忘记执行不会导致问题悄悄发出去，而是直接 `BUILD FAILED`。每条规则都先用**故意失败探针**证明过真的能拦住。
+
+### 1. `guardGlassTheme` — 玻璃明暗不许写死
 
 玻璃组件的明暗**必须由主题决定**。这个错误犯过三次（设置页三行 / AI 按钮 / 图标选择框），每次表现都是「颜色和背景不融合」——不崩、不报警，只有肉眼能发现，编译器管不了。所以加了两道防线：
 
@@ -253,6 +261,28 @@ HTTP 用 JDK 自带的 `HttpURLConnection` 而不是 OkHttp：应用只是通过
   · 需要往下传时，让它一路从 isDarkGlass() 来，不要写字面量
 BUILD FAILED
 ```
+
+### 2. `guardScreenInsets` — 每个页面都要给覆盖层栏让位
+
+顶栏/底栏是**浮在内容之上的覆盖层**，页面必须自己消费 `LocalBarsInsets`，否则首尾内容被玻璃盖住。这个错误也犯过两次（搜索页固定头部没加 top inset → 和标题栏叠成双标题；曲目详情页整页漏掉 → 封面被标题栏盖掉一截、最后一张卡片压在底栏下面），同样是"不报错、只有用户能发现"。
+
+`guardScreenInsets` 挂在 `preBuild` 上，要求 `ui/` 下每个 `*Screen.kt` 至少出现一次 `barsPadded(` / `barsInset(` / `LocalBarsInsets`（注释行不计，避免注释里提一句就蒙混过关）；白名单里只有 `OnboardingScreen.kt`——它是提前返回的独立全屏页面，那时两条栏都还没渲染。
+
+实测有效（故意放一个空 `ZzProbeScreen.kt`）：
+
+```
+这些页面没有给覆盖层栏让位：
+    · ZzProbeScreen.kt
+栏是覆盖层，页面必须自己消费 LocalBarsInsets，否则首尾内容会被玻璃盖住：
+  · LazyColumn → contentPadding = barsPadded(base)
+  · verticalScroll 的 Column → Modifier.barsInset()（写在 verticalScroll 之后）
+  · 固定头部 → padding(top = LocalBarsInsets.current.top)
+BUILD FAILED
+```
+
+### 3. release 依赖单元测试
+
+`assembleRelease` / `bundleRelease` 依赖 `testDebugUnitTest`——测试不过就出不了包。debug 迭代不受影响，不必每次等测试。
 
 注意这条规则**只覆盖玻璃明暗这一类问题**。布局类（容器包错）与闪退类（列表 item 里嵌可滚动组件）它管不了。
 
@@ -444,8 +474,8 @@ node tools/3-prepare-assets.cjs     # 精简并写入 app/src/main/assets/
 | 项 | 值 |
 |---|---|
 | 包名 / namespace | `za.bilbd.app`（debug 构建自动加 `.debug` 后缀） |
-| 版本名 | `1.145` |
-| versionCode | `1145` |
+| 版本名 | `4.3` |
+| versionCode | `4300` |
 | minSdk | 26（Android 8.0） |
 | targetSdk / compileSdk | 37 / 37.1（Android 17） |
 | ABI | arm64-v8a、armeabi-v7a、x86、x86_64（四种都打进去了，手机平板通用） |

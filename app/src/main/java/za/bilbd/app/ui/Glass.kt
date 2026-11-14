@@ -44,6 +44,12 @@ import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.glass.hazeGlass
+import dev.chrisbanes.haze.glass.GlassStyle
+import dev.chrisbanes.haze.glass.GlassOptics
 
 // ---------------------------------------------------------------------------
 // 液态玻璃（Liquid Glass）视觉层
@@ -310,3 +316,114 @@ fun glassContentColor(dark: Boolean): Color =
 @Composable
 fun glassMutedColor(dark: Boolean): Color =
     if (dark) Color(0xFFC8C0D8) else Color(0xFF5C5666)
+/**
+ * 悬浮胶囊底栏的填充。
+ *
+ * 比普通卡片更实一点：底栏永远压着内容，图标与文字必须在任何背景上都读得清，
+ * 所以不透明度整体上调，但仍保留顶部更亮的受光感。
+ */
+@Composable
+fun glassBarFill(dark: Boolean): Brush = if (dark) {
+    Brush.verticalGradient(
+        0f to Color.White.copy(alpha = 0.26f),
+        0.45f to Color.White.copy(alpha = 0.11f),
+        1f to Color.White.copy(alpha = 0.17f),
+    )
+} else {
+    Brush.verticalGradient(
+        0f to Color.White.copy(alpha = 0.96f),
+        0.45f to Color.White.copy(alpha = 0.80f),
+        1f to Color.White.copy(alpha = 0.90f),
+    )
+}
+
+/**
+ * 悬浮胶囊的镜面描边：**上沿吃光、下沿压暗**。
+ *
+ * 普通卡片用的是斜向渐变；胶囊是横置的，纵向渐变才像「一条玻璃被上方光照到」——
+ * 上缘最亮、中间几乎透明、下缘有一点反射光，这是 iOS 液体玻璃最有辨识度的一笔。
+ */
+@Composable
+fun glassSpecularBorder(dark: Boolean): Brush = Brush.verticalGradient(
+    0f to if (dark) Color.White.copy(alpha = 0.62f) else Color.White.copy(alpha = 1f),
+    0.42f to if (dark) Color.White.copy(alpha = 0.09f) else Color.White.copy(alpha = 0.30f),
+    1f to if (dark) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.72f),
+)
+/**
+ * 主内容面板的底色。
+ *
+ * 刻意做得极淡：它的作用只是让圆角在页面上**看得出来**（否则圆角裁的是透明区域，
+ * 视觉上等于没有），卡片本身已有各自的高光描边，这里再加浓就会糊成一片。
+ */
+@Composable
+fun glassContentPanel(dark: Boolean): Brush = Brush.verticalGradient(
+    0f to if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.42f),
+    0.5f to if (dark) Color.White.copy(alpha = 0.03f) else Color.White.copy(alpha = 0.28f),
+    1f to if (dark) Color.White.copy(alpha = 0.04f) else Color.White.copy(alpha = 0.36f),
+)
+// ---------------------------------------------------------------------------
+// 液体玻璃（haze 2.x）：真实折射 —— 采样背后的内容并做光学变形
+// ---------------------------------------------------------------------------
+
+/**
+ * 悬浮面板的液体玻璃修饰符。
+ *
+ * 与 `glassBarFill` 那套「半透明蒙版」的区别：这里是真的把**背后的内容**采样进来，
+ * 按折射模型扭曲、模糊、再叠高光与色散，所以内容滑过时边缘会像透镜一样弯。
+ *
+ * 用 `GlassStyle.clear`：保留更多背景、折射集中在边缘一圈——这是胶囊/工具条最像
+ * iOS 26 的一种。低端机/不支持的渲染路径会自动回退（haze 内部处理），
+ * 回退时只剩底色和柔和边缘，不会崩。
+ */
+@Composable
+fun Modifier.liquidGlassBar(
+    dark: Boolean,
+    hazeState: HazeState,
+    shape: RoundedCornerShape = RoundedCornerShape(28.dp),
+): Modifier {
+    val style = remember(dark, shape) {
+        GlassStyle.regular.then {
+            // 底色：玻璃不会"发灰"，是因为背后压着一层接近实色的底。
+            // 去掉它（默认 transparent）会直接看到模糊后的背景，浅色下显得脏。
+            backgroundColor(
+                if (dark) Color(0xFF121218).copy(alpha = 0.55f) else Color.White.copy(alpha = 0.72f)
+            )
+            tint(if (dark) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.18f))
+            shape(shape)
+            // 这条横线是玻璃的镜面/环境光在约 1/3 高度处形成的分界带，
+            // 在深色下看起来像一道横杠，用户要求去掉，所以关掉这两项响应。
+            specularIntensity(0f)
+            ambientResponse(0f)
+            edgeShadow(Color.Transparent)
+            // 边缘轻微色散：0.1~0.25 之间最自然，再高会出现彩虹边
+            chromaticAberrationStrength(0.14f)
+        }
+    }
+    return this
+        .clip(shape)
+        .hazeGlass(input = HazeInput.Backdrop(hazeState), style = style)
+}
+
+/**
+ * 状态栏那一条的玻璃。
+ *
+ * 与 [liquidGlassBar] 的区别：这里要**透**——内容从下面滑过时要能看出被模糊了，
+ * 而不是被一块底色盖死。所以底色只留一点点（保证状态栏图标可读），
+ * 也不做色散（一条横带上的彩虹边会很脏）。
+ */
+@Composable
+fun Modifier.liquidStatusGlass(
+    dark: Boolean,
+    hazeState: HazeState,
+): Modifier {
+    val style = remember(dark) {
+        GlassStyle.regular.then {
+            backgroundColor(if (dark) Color.Black.copy(alpha = 0.24f) else Color.White.copy(alpha = 0.28f))
+            specularIntensity(0f)
+            ambientResponse(0f)
+            edgeShadow(Color.Transparent)
+            shape(RoundedCornerShape(0.dp))
+        }
+    }
+    return this.hazeGlass(input = HazeInput.Backdrop(hazeState), style = style)
+}

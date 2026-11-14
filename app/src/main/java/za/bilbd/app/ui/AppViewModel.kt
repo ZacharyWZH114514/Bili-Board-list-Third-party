@@ -26,6 +26,8 @@ import za.bilbd.app.data.FavoritesStore
 import za.bilbd.app.data.FollowStore
 import za.bilbd.app.data.Issue
 import za.bilbd.app.data.RepoState
+import za.bilbd.app.data.NewIssueScheduler
+import za.bilbd.app.data.SearchMode
 import za.bilbd.app.data.issueSystemPrompt
 import za.bilbd.app.data.personaPrefix
 import za.bilbd.app.data.songSystemPrompt
@@ -42,7 +44,19 @@ import za.bilbd.app.data.buildSongSearchQuery
 sealed interface AiUiState {
     data object Idle : AiUiState
     data object Loading : AiUiState
-    data class Done(val text: String, val model: String) : AiUiState
+
+    /**
+     * @param model 用户请求的模型（设置里选的那个），界面上「由 xxx 生成」用它
+     * @param servedModel 服务端自称的模型；和 [model] 不同说明中转站改了路由，界面要提示
+     */
+    data class Done(
+        val text: String,
+        val model: String,
+        val servedModel: String = "",
+        /** 联网搜索的引用来源（没有联网时为空） */
+        val citations: List<za.bilbd.app.data.WebSource> = emptyList(),
+    ) : AiUiState
+
     data class Failed(val message: String) : AiUiState
 }
 
@@ -63,7 +77,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         AppLog.attach(app)
         // 启动也记一笔：日志页不该只有「出错」才有内容，
         // 而且这样用户第一次打开日志页就能看到东西，知道功能是活的
-        AppLog.add("启动", "应用启动 · v1.145")
+        AppLog.add("启动", "应用启动 · v" + za.bilbd.app.BuildConfig.VERSION_NAME)
     }
     private val settings = SettingsStore(app)
     private val deepSeek = DeepSeekApi()
@@ -81,6 +95,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val screenStack = mutableStateListOf<Screen>(Screen.Home)
     val biliVideos: StateFlow<Map<String, BiliVideo>> = bili.videos
     val aiConfig: StateFlow<AiConfig> = settings.ai
+
+    /** 新一期提醒开关 */
+    val newIssueAlert: StateFlow<Boolean> = settings.newIssueAlert
+
+    /** 开关一变就同步定时任务：关掉立刻撤销，开启立刻登记（不等到下次启动） */
+    fun setNewIssueAlert(enabled: Boolean) {
+        settings.setNewIssueAlert(enabled)
+        NewIssueScheduler.sync(getApplication(), enabled)
+    }
+
+    /** 周榜日期偏移（天）：期列表/榜单头显示的日期会按它平移 */
+    val dateOffsetDays: StateFlow<Int> = settings.dateOffsetDays
+    fun setDateOffsetDays(days: Int) = settings.setDateOffsetDays(days)
 
     // -------- 搜索状态 --------
     private val _query = MutableStateFlow("")
@@ -171,7 +198,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             logAiOutcome("周榜分析", result)
             _aiStates.value = _aiStates.value + (
                 issue.issueId to when (result) {
-                    is AiResult.Ok -> AiUiState.Done(result.text, result.model)
+                    is AiResult.Ok -> AiUiState.Done(result.text, result.model, result.servedModel, result.citations)
                     is AiResult.Err -> AiUiState.Failed(result.message)
                 }
                 )
@@ -222,23 +249,45 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val result = runCatching {
                 var searchNote: String? = null
 
+                // DeepSeek 自带的联网搜索：搜索与抓取都在服务端完成，这里只需要在请求里声明工具。
+                // 只有 deepseek-flash 支持，所以还要确认当前模型就是它。
+                val nativeSearch = config.searchMode == SearchMode.DeepSeek &&
+                    config.ready &&
+                    config.model.trim().startsWith("deepseek-flash")
+
                 // 1) 联网取资料；失败不阻断解读，只把原因记下来交给模型说明
-                val sources: List<WebSource> = if (config.searchReady) {
-                    when (
-                        val outcome = doubao.search(
-                            apiKey = config.doubaoApiKey,
-                            query = buildSongSearchQuery(title, titleCn, producer, vocalist),
-                        )
-                    ) {
-                        is SearchOutcome.Ok -> outcome.sources
-                        is SearchOutcome.Err -> {
-                            searchNote = outcome.message
-                            emptyList()
+                val sources: List<WebSource> = when (config.searchMode) {
+                    SearchMode.DeepSeek -> {
+                        searchNote = if (nativeSearch) {
+                            "本次由 DeepSeek 内置联网搜索自行检索（模型决定搜不搜）"
+                        } else {
+                            "当前模型不支持 DeepSeek 内置搜索，本次没有联网资料"
                         }
+                        emptyList()
                     }
-                } else {
-                    searchNote = "未配置豆包搜索 Key，本次没有联网资料"
-                    emptyList()
+
+                    SearchMode.Doubao -> if (config.searchReady) {
+                        when (
+                            val outcome = doubao.search(
+                                apiKey = config.doubaoApiKey,
+                                query = buildSongSearchQuery(title, titleCn, producer, vocalist),
+                            )
+                        ) {
+                            is SearchOutcome.Ok -> outcome.sources
+                            is SearchOutcome.Err -> {
+                                searchNote = outcome.message
+                                emptyList()
+                            }
+                        }
+                    } else {
+                        searchNote = "未配置豆包搜索 Key，本次没有联网资料"
+                        emptyList()
+                    }
+
+                    SearchMode.Off -> {
+                        searchNote = "已关闭联网搜索，本次没有外部资料"
+                        emptyList()
+                    }
                 }
 
                 // 2) 让模型基于资料写解读
@@ -258,6 +307,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Log.i(
                     TAG_INSIGHT,
                     "bvid=$bvid 检索到 ${sources.size} 条资料" +
+                        "；内置搜索=${if (nativeSearch) "开" else "关"}" +
                         (searchNote?.let { "（说明：$it）" } ?: "") +
                         "；提示词 ${prompt.length} 字",
                 )
@@ -270,6 +320,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         // 同上：这份提示词里含检索到的资料，追问要复用
                         promptCache["song:$bvid"] = songSystemPrompt() + "\n\n" + it
                     },
+                    webSearch = nativeSearch,
                 )
             }.getOrElse { t ->
                 AppLog.add("AI", "请求失败：${t.javaClass.simpleName}: ${t.message?.take(80)}")
@@ -281,7 +332,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             logAiOutcome("单曲解读", result)
             _insights.value = _insights.value + (
                 bvid to when (result) {
-                    is AiResult.Ok -> AiUiState.Done(result.text, result.model)
+                    is AiResult.Ok -> AiUiState.Done(result.text, result.model, result.servedModel, result.citations)
                     is AiResult.Err -> AiUiState.Failed(result.message)
                 }
                 )
@@ -296,7 +347,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun logAiOutcome(action: String, result: AiResult) {
         when (result) {
-            is AiResult.Ok -> AppLog.add("AI", "$action 成功 · 模型 ${result.model}")
+            is AiResult.Ok -> AppLog.add(
+                        "AI",
+                        buildString {
+                            append("$action 成功 · 请求模型 ${result.model}")
+                            if (result.servedModel.isNotBlank() && result.servedModel != result.model) {
+                                append("（服务端实际 ${result.servedModel}）")
+                            }
+                        },
+                    )
             is AiResult.Err -> AppLog.add("AI", "$action 失败 · ${result.message.take(80)}")
         }
     }

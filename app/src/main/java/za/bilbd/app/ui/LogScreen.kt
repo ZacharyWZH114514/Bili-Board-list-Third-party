@@ -58,6 +58,7 @@ fun LogScreen(
         modifier = modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
+            .barsInset()
             .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {

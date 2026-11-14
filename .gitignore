@@ -1,0 +1,32 @@
+# Android / Gradle 构建产物
+build/
+.gradle/
+.gradle-home/
+.kotlin/
+.tmp/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# 本机环境（绑死了本机路径，别人 clone 下来必须自己生成）
+local.properties
+.android-home/
+
+# 工具链：项目用的 JDK / Gradle / platform-tools 都在 .tools 下，
+# 体积几百 MB，不进仓库
+.tools/
+shots/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# 打包产物
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# 日志
+*.log

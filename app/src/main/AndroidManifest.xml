@@ -3,6 +3,7 @@
 
     <!-- 仅用于加载曲目封面图；榜单数据全部内置在 APK 中，每 3 天增量更新一次 -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- 手机 / 平板 / 大屏都要支持；界面按窗口宽度自适应用底部或侧边导航 -->
     <supports-screens
@@ -124,6 +125,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+
+    
+        <!-- 可选的「后台常驻」：只是一个保活用的无障碍服务，不读屏幕、不碰别的应用。
+             默认关闭，要用户在「设置 → 无障碍」里手动打开；不用它时靠 WorkManager 定时检查。 -->
+        <service
+            android:name=".data.KeepAliveService"
+            android:exported="false"
+            android:label="Vocaloid List 后台常驻"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/keep_alive_service" />
+        </service>
 
     </application>
 

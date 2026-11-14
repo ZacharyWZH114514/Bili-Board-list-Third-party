@@ -51,6 +51,9 @@ private data class OnboardPage(
     val footnote: String? = null,
 )
 
+/** 平板下引导内容的最大宽度：卡片、按钮共用同一列宽，避免宽屏被拉成一条 */
+private val ONBOARD_CONTENT_MAX = 560.dp
+
 /**
  * 新手引导（首启 OOBE）。
  *
@@ -154,8 +157,10 @@ fun OnboardingScreen(
 
             Column(
                 Modifier.fillMaxWidth().padding(bottom = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                // 平板下不能铺满整宽：按钮和上面的卡片保持同一列宽，否则看起来"错位"
                 GlassSurface(
                     shape = RoundedCornerShape(14.dp),
                     contentPadding = PaddingValues(vertical = 13.dp),
@@ -166,7 +171,7 @@ fun OnboardingScreen(
                             scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.widthIn(max = ONBOARD_CONTENT_MAX).fillMaxWidth(),
                 ) {
                     Text(
                         text = if (isLast) stringResource(R.string.onboard_start) else stringResource(R.string.onboard_next),
@@ -185,7 +190,7 @@ fun OnboardingScreen(
                             onFinish()
                             onOpenAiSettings()
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.widthIn(max = ONBOARD_CONTENT_MAX).fillMaxWidth(),
                     ) { Text(stringResource(R.string.onboard_open_ai)) }
                 }
             }
@@ -200,7 +205,10 @@ private fun OnboardPageContent(page: OnboardPage, dark: Boolean) {
             dark = dark,
             shape = RoundedCornerShape(24.dp),
             contentPadding = PaddingValues(24.dp),
-            modifier = Modifier.fillMaxWidth().widthIn(max = 520.dp),
+            // 顺序不能反：先 widthIn 再 fillMaxWidth。
+            // 写成 fillMaxWidth().widthIn(max=...) 时宽度已经被撑到父约束，
+            // 平板下卡片会铺满整屏 —— 这就是之前"错位"的根源。
+            modifier = Modifier.widthIn(max = ONBOARD_CONTENT_MAX).fillMaxWidth(),
         ) {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
@@ -226,6 +234,7 @@ private fun OnboardPageContent(page: OnboardPage, dark: Boolean) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 page.footnote?.let {
                     Spacer(Modifier.height(14.dp))

@@ -41,6 +41,8 @@ fun RankingScreen(
     onClearAi: () -> Unit = {},
     /** AI 追问状态（分析出结果后才有资料可依据） */
     chat: AiChatState = AiChatState(),
+    /** 周榜日期偏移（天），见 SettingsStore.setDateOffsetDays */
+    dateOffsetDays: Int = 0,
 ) {
     if (issue == null) {
         MessagePane("找不到该期榜单")
@@ -49,7 +51,7 @@ fun RankingScreen(
     val entries = issue.entries.sortedBy { it.rank }
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+        contentPadding = barsPadded(PaddingValues(horizontal = 12.dp, vertical = 12.dp)),
         verticalArrangement = Arrangement.spacedBy(9.dp),
     ) {
         item {
@@ -75,10 +77,20 @@ fun RankingScreen(
                 Column {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "$boardName · 收录 ${entries.size} 首 · 统计截止 ${formatDate(issue.endDate)}",
+                        // 日期跟网站同口径（榜单视频发布时间）；统计截止单独留在下一行，
+                        // 两者是不同的东西，不能混在一个「统计截止」里
+                        text = "$boardName · 收录 ${entries.size} 首 · " +
+                            formatIssueDate(issue, dateOffsetDays),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (issue.endDate > 0L) {
+                        Text(
+                            text = "数据统计截止 ${formatDate(issue.endDate)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     issue.videoBvid?.let { bvid ->
                         Text(
                             text = "视频 $bvid",

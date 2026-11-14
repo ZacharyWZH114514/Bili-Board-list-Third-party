@@ -23,6 +23,24 @@ enum class ThemeMode(val label: String) {
     }
 }
 
+/** 联网搜索走哪条路 */
+enum class SearchMode(val key: String, val label: String) {
+    /** 不联网：只靠模型自己的知识，解读里会说明资料有限 */
+    Off("off", "关闭"),
+
+    /** 豆包搜索接口，结果作为资料塞进提示词（需要单独的豆包 Key） */
+    Doubao("doubao", "豆包"),
+
+    /** DeepSeek 自带的 deepseek_web_search：服务端搜、服务端引，只需要模型那把 Key */
+    DeepSeek("deepseek", "DeepSeek 内置"),
+
+    ;
+
+    companion object {
+        fun fromKey(k: String?): SearchMode? = entries.firstOrNull { it.key == k }
+    }
+}
+
 /** AI 分析的相关配置 */
 data class AiConfig(
     /**
@@ -36,6 +54,8 @@ data class AiConfig(
     val doubaoApiKey: String = "",
     /** 人格模式（PERSONA_LOAD）：开启后系统提示词前会拼上角色设定 */
     val persona: Boolean = false,
+    /** 联网搜索走哪条路，见 [SearchMode] */
+    val searchMode: SearchMode = SearchMode.DeepSeek,
 ) {
     /** 当前 Base URL 指向哪个服务商（认不出来就是自定义） */
     val providerId: String get() = AiProviders.of(baseUrl).id
@@ -47,7 +67,12 @@ data class AiConfig(
     val ready: Boolean get() = apiKey.isNotBlank()
 
     /** 能不能联网搜索。没有也能解读，只是少了外部资料 */
-    val searchReady: Boolean get() = doubaoApiKey.isNotBlank()
+    val searchReady: Boolean get() = when (searchMode) {
+        SearchMode.Off -> false
+        SearchMode.Doubao -> doubaoApiKey.isNotBlank()
+        // 复用模型那把 Key，不用额外配置
+        SearchMode.DeepSeek -> ready
+    }
 
     /** 取某个服务商的 Key，供设置页切服务商时回填 */
     fun keyFor(id: String): String = keys[id].orEmpty()
@@ -72,6 +97,18 @@ class SettingsStore(context: Context) {
     )
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
+    private val _newIssueAlert = MutableStateFlow(prefs.getBoolean(KEY_NEW_ISSUE_ALERT, false))
+
+    /** 有新一期榜单时发通知（后台由 WorkManager 定时检查） */
+    val newIssueAlert: StateFlow<Boolean> = _newIssueAlert.asStateFlow()
+
+    private val _dateOffsetDays = MutableStateFlow(
+        prefs.getInt(KEY_DATE_OFFSET, 0).coerceIn(DATE_OFFSET_MIN, DATE_OFFSET_MAX)
+    )
+
+    /** 周榜日期偏移（天），见 [setDateOffsetDays] */
+    val dateOffsetDays: StateFlow<Int> = _dateOffsetDays.asStateFlow()
+
     /** 新手引导是否看过。默认 false —— 首次安装会走到引导页 */
     private val _onboardingDone = MutableStateFlow(prefs.getBoolean(KEY_ONBOARDING_DONE, false))
     val onboardingDone: StateFlow<Boolean> = _onboardingDone.asStateFlow()
@@ -81,13 +118,32 @@ class SettingsStore(context: Context) {
             keys = loadAiKeys(),
             baseUrl = prefs.getString(KEY_AI_BASE, DeepSeekApi.DEFAULT_BASE_URL)
                 .orEmpty().ifBlank { DeepSeekApi.DEFAULT_BASE_URL },
-            model = prefs.getString(KEY_AI_MODEL, DeepSeekApi.MODELS.first())
-                .orEmpty().ifBlank { DeepSeekApi.MODELS.first() },
+            // 老配置里可能是已停用的 deepseek-chat / deepseek-reasoner，读出来就换成新名字
+            model = DeepSeekApi.migrateModel(
+                prefs.getString(KEY_AI_MODEL, DeepSeekApi.MODELS.first())
+                    .orEmpty().ifBlank { DeepSeekApi.MODELS.first() }
+            ),
             persona = prefs.getBoolean(KEY_AI_PERSONA, false),
             doubaoApiKey = prefs.getString(KEY_DOUBAO_KEY, "").orEmpty(),
+            searchMode = loadSearchMode(),
         )
     )
     val ai: StateFlow<AiConfig> = _ai.asStateFlow()
+
+    /**
+     * 联网搜索方式。
+     *
+     * 没存过时按现状推断：以前只有豆包一条路，所以**填过豆包 Key 的老用户继续用豆包**，
+     * 否则默认走 DeepSeek 自带搜索（不需要额外 Key）。
+     */
+    private fun loadSearchMode(): SearchMode {
+        SearchMode.fromKey(prefs.getString(KEY_SEARCH_MODE, null))?.let { return it }
+        return if (prefs.getString(KEY_DOUBAO_KEY, "").orEmpty().isNotBlank()) {
+            SearchMode.Doubao
+        } else {
+            SearchMode.DeepSeek
+        }
+    }
 
 
     /**
@@ -121,6 +177,24 @@ class SettingsStore(context: Context) {
         _updateIntervalDays.value = days
     }
 
+    /**
+     * 周榜日期偏移（天）。
+     *
+     * 期列表里的日期用的是网站标的 `video_pubdate`，正常情况下和网站一致；
+     * 但个别期如果站点自己也标错、或者用户想按自己的口径看，就用这个手动挪几天。
+     * 范围 -7..+7，0 表示不动。
+     */
+    fun setNewIssueAlert(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_NEW_ISSUE_ALERT, enabled).apply()
+        _newIssueAlert.value = enabled
+    }
+
+    fun setDateOffsetDays(days: Int) {
+        val v = days.coerceIn(DATE_OFFSET_MIN, DATE_OFFSET_MAX)
+        prefs.edit().putInt(KEY_DATE_OFFSET, v).apply()
+        _dateOffsetDays.value = v
+    }
+
     fun setThemeMode(mode: ThemeMode) {
         prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()
         _themeMode.value = mode
@@ -138,6 +212,7 @@ class SettingsStore(context: Context) {
             .putString(KEY_AI_MODEL, config.model)
         .putBoolean(KEY_AI_PERSONA, config.persona)
             .putString(KEY_DOUBAO_KEY, config.doubaoApiKey)
+            .putString(KEY_SEARCH_MODE, config.searchMode.key)
             .apply()
         _ai.value = config
     }
@@ -155,10 +230,17 @@ class SettingsStore(context: Context) {
         /** 可选周期 */
         val PRESETS = listOf(MANUAL_ONLY, DAILY_AT_18, 1, 3, 7, 14, 30)
 
+        /** 周榜日期偏移的可选值（天） */
+        val DATE_OFFSET_PRESETS = listOf(-3, -2, -1, 0, 1, 2, 3)
+        const val DATE_OFFSET_MIN = -7
+        const val DATE_OFFSET_MAX = 7
+
         private const val KEY_INTERVAL_DAYS = "update_interval_days"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
         private const val KEY_AI_KEY = "ai_api_key"
+        private const val KEY_DATE_OFFSET = "date_offset_days"
+        private const val KEY_NEW_ISSUE_ALERT = "new_issue_alert"
 
         /** 各服务商的 Key 存成一个 JSON 对象（providerId -> key） */
         private const val KEY_AI_KEYS = "ai_api_keys"
@@ -166,6 +248,7 @@ class SettingsStore(context: Context) {
         private const val KEY_AI_MODEL = "ai_model"
     private const val KEY_AI_PERSONA = "ai_persona"
         private const val KEY_DOUBAO_KEY = "doubao_api_key"
+        private const val KEY_SEARCH_MODE = "ai_search_mode"
 
         /** 周期的中文描述 */
         fun describe(days: Int): String = when (days) {

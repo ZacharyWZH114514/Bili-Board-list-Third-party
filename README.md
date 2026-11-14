@@ -8,7 +8,7 @@ Built with Jetpack Compose and a Liquid Glass look.
 The app ships with a bundled snapshot of the chart data, so it opens instantly and works offline.
 It refreshes **incrementally once every 3 days**.
 
-> Package `za.bilbd.app` · version `1.145` · minSdk 26 · targetSdk 37
+> Package `za.bilbd.app` · version `4.3` · minSdk 26 · targetSdk 37
 
 ---
 
@@ -146,6 +146,7 @@ not by convention. A guard task fails the build; it does not warn.
 | Guard | What it prevents |
 |---|---|
 | `guardGlassTheme` | Hard-coded `dark = true/false` in `ui/` — glass brightness must follow the theme |
+| `guardScreenInsets` | A `*Screen.kt` that never consumes `LocalBarsInsets` — its first/last content would be hidden under the floating top/bottom bars |
 | `assembleRelease → testDebugUnitTest` | Shipping a release with failing tests |
 
 Each guard was verified with a deliberate failure probe before being trusted.

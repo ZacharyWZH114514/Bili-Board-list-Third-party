@@ -82,7 +82,9 @@ fun FavoritesScreen(
         onImportResult(FavoritesCodec.decode(text))
     }
 
-    Column(Modifier.fillMaxWidth()) {
+    // 头部（含导入/导出按钮）不在滚动容器里，必须自己给覆盖层顶栏让位，
+    // 否则「已收藏 N 首」这张卡会被标题栏盖住 —— 搜索页之前也踩过同一个坑。
+    Column(Modifier.fillMaxWidth().padding(top = LocalBarsInsets.current.top)) {
         GlassSurface(
             dark = dark,
             shape = RoundedCornerShape(20.dp),
@@ -139,7 +141,11 @@ fun FavoritesScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(top = 2.dp, bottom = 16.dp),
+            // 顶部已经由外层 Column 让过位了，这里只补底部，避免重复留出顶栏的高度
+            contentPadding = PaddingValues(
+                top = 2.dp,
+                bottom = 16.dp + LocalBarsInsets.current.bottom,
+            ),
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             itemsIndexed(hits, key = { _, hit -> hit?.bvid ?: "null" }) { index, hit ->
