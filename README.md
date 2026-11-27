@@ -1,4 +1,7 @@
 # Vocaloid List · BiliBoard Android
+> **Download**: [Vocaloid List 6.2 APK](https://github.com/ZacharyWZH114514/Bili-Board-list-Third-party/releases/latest/download/Vocaloid-List-6.2.apk) · [all releases](https://github.com/ZacharyWZH114514/Bili-Board-list-Third-party/releases)
+>
+> Android 8.0+ · debug-signed, installs over older builds · network required (AI features need your own API key)
 
 English | **[中文](README.zh.md)**
 
