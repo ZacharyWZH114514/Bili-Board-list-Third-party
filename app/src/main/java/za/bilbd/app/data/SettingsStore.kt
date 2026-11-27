@@ -102,6 +102,18 @@ class SettingsStore(context: Context) {
     /** 有新一期榜单时发通知（后台由 WorkManager 定时检查） */
     val newIssueAlert: StateFlow<Boolean> = _newIssueAlert.asStateFlow()
 
+    private val _widgetBoardId = MutableStateFlow(
+        prefs.getInt(KEY_WIDGET_BOARD, WidgetSnapshot.DEFAULT_WIDGET_BOARD_ID)
+    )
+
+    /** 桌面小组件显示哪个榜：1 = 周榜，2 = 传说曲周榜 */
+    val widgetBoardId: StateFlow<Int> = _widgetBoardId.asStateFlow()
+
+    private val _widgetRows = MutableStateFlow(prefs.getInt(KEY_WIDGET_ROWS, 0))
+
+    /** 小组件显示几条：0 = 跟随格子高度自动 */
+    val widgetRows: StateFlow<Int> = _widgetRows.asStateFlow()
+
     private val _dateOffsetDays = MutableStateFlow(
         prefs.getInt(KEY_DATE_OFFSET, 0).coerceIn(DATE_OFFSET_MIN, DATE_OFFSET_MAX)
     )
@@ -189,6 +201,16 @@ class SettingsStore(context: Context) {
         _newIssueAlert.value = enabled
     }
 
+    fun setWidgetBoard(boardId: Int) {
+        prefs.edit().putInt(KEY_WIDGET_BOARD, boardId).apply()
+        _widgetBoardId.value = boardId
+    }
+
+    fun setWidgetRows(rows: Int) {
+        prefs.edit().putInt(KEY_WIDGET_ROWS, rows).apply()
+        _widgetRows.value = rows
+    }
+
     fun setDateOffsetDays(days: Int) {
         val v = days.coerceIn(DATE_OFFSET_MIN, DATE_OFFSET_MAX)
         prefs.edit().putInt(KEY_DATE_OFFSET, v).apply()
@@ -241,6 +263,8 @@ class SettingsStore(context: Context) {
         private const val KEY_AI_KEY = "ai_api_key"
         private const val KEY_DATE_OFFSET = "date_offset_days"
         private const val KEY_NEW_ISSUE_ALERT = "new_issue_alert"
+        private const val KEY_WIDGET_BOARD = "widget_board_id"
+        private const val KEY_WIDGET_ROWS = "widget_rows"
 
         /** 各服务商的 Key 存成一个 JSON 对象（providerId -> key） */
         private const val KEY_AI_KEYS = "ai_api_keys"

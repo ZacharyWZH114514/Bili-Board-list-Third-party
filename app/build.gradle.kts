@@ -18,8 +18,8 @@ android {
         // versionName 是用户在「关于」页看到的版本号；
         // versionCode 只给系统判断「哪个更新」，必须严格递增（1.145 那版是 1145，所以这里取 1200）。
         // 代码里不要再硬编码版本号，统一读 BuildConfig.VERSION_NAME。
-        versionCode = 4300
-        versionName = "4.3"
+        versionCode = 6200
+        versionName = "6.2"
     }
 
     buildFeatures {
@@ -78,6 +78,7 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.work:work-runtime-ktx:2.10.5")
+    implementation("androidx.glance:glance-appwidget:1.2.0")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")

@@ -40,6 +40,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 
 // ---------------------------------------------------------------------------
 // 格式化
@@ -334,6 +338,51 @@ fun ThinDivider(modifier: Modifier = Modifier) {
     )
 }
 
+/**
+ * 柱子间距的纯计算，抽出来是为了能单测：
+ *
+ * 以前是写死 `spacedBy(4.dp)`，上榜 79 次的曲子有 79 根柱子，
+ * 光间距就要 78 × 4 = 312dp，超过卡片实际宽度，`weight(1f)` 分到负空间，
+ * 每根柱子宽度算成 0 —— 于是「走势图里一根柱子都看不见」。
+ *
+ * 规则：先保证每根柱子至少 [minBarDp] 宽，剩下的空间再均分成间隙，间隙上限 [maxGapDp]。
+ */
+object BarLayout {
+    /** 舒服的柱子宽度：少于这个数就改成横向滚动，而不是把柱子压成线 */
+    const val COMFORT_BAR_DP = 8f
+
+    /** 舒服的间距 */
+    const val COMFORT_GAP_DP = 3f
+
+    fun gapFor(
+        availableDp: Float,
+        count: Int,
+        maxGapDp: Float = 4f,
+        minBarDp: Float = 2f,
+    ): Float {
+        if (count <= 1) return 0f
+        val free = availableDp - minBarDp * count
+        if (free <= 0f) return 0f
+        return (free / (count - 1)).coerceAtMost(maxGapDp)
+    }
+
+    /**
+     * 点太多、按舒服宽度放不下时就该横向滚动。
+     *
+     * 上榜 79 次的曲子，79 × (8+3) = 869dp，远超手机卡片宽度 ——
+     * 以前硬挤成一条线，现在改成可滑动，用户能一路翻到底。
+     */
+    fun needsScroll(availableDp: Float, count: Int): Boolean =
+        count * (COMFORT_BAR_DP + COMFORT_GAP_DP) > availableDp
+
+    /** 每根柱子的实际宽度，用来决定圆角大小（太窄还用 3dp 圆角会糊成一团） */
+    fun barWidthFor(availableDp: Float, count: Int, gapDp: Float): Float {
+        if (count <= 0) return 0f
+        val usable = availableDp - gapDp * (count - 1)
+        return (usable / count).coerceAtLeast(0f)
+    }
+}
+
 /** 迷你条形图：把一组数值画成柱状 */
 @Composable
 fun MiniBars(
@@ -344,20 +393,55 @@ fun MiniBars(
 ) {
     if (values.isEmpty()) return
     val max = values.maxOrNull()?.takeIf { abs(it) > 0.0001f } ?: 1f
-    Row(
-        modifier = modifier.height(barHeight),
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        values.forEach { v ->
-            val frac = (v / max).coerceIn(0.06f, 1f)
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(barHeight * frac)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(color.copy(alpha = 0.75f))
-            )
+    BoxWithConstraints(modifier.height(barHeight)) {
+        val count = values.size
+        val availableDp = maxWidth.value
+        val scrollable = BarLayout.needsScroll(availableDp, count)
+
+        if (scrollable) {
+            // 点太多：固定柱宽 + 横向滑动，别把 79 根柱子压成看不见的细线
+            val barWidth = BarLayout.COMFORT_BAR_DP.dp
+            val gap = BarLayout.COMFORT_GAP_DP.dp
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(barHeight)
+                    .horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(gap),
+            ) {
+                values.forEach { v ->
+                    val frac = (v / max).coerceIn(0.06f, 1f)
+                    Box(
+                        Modifier
+                            .width(barWidth)
+                            .height(barHeight * frac)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(color.copy(alpha = 0.75f))
+                    )
+                }
+            }
+        } else {
+            val gap = BarLayout.gapFor(availableDp, count).dp
+            val barWidth = BarLayout.barWidthFor(availableDp, count, gap.value)
+            // 柱子很窄时圆角跟着收，否则会糊成一团
+            val radius = (barWidth / 3f).coerceIn(0.5f, 3f).dp
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(gap),
+            ) {
+                values.forEach { v ->
+                    val frac = (v / max).coerceIn(0.06f, 1f)
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(barHeight * frac)
+                            .clip(RoundedCornerShape(radius))
+                            .background(color.copy(alpha = 0.75f))
+                    )
+                }
+            }
         }
     }
 }

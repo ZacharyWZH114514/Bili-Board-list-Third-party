@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小组件底：真正「液态玻璃」的样子。
+  桌面上的小组件拿不到壁纸内容做模糊（Android 17 也没给 widget 开放模糊 API），
+  所以这里用**高透明度**的渐变让壁纸透上来，再靠下面这层高光做出玻璃的厚度感：
+    · 底色 alpha ≈ 0.55：能看清壁纸又不影响阅读
+    · 顶部一道白→透明的斜向高光（见 widget_sheen.xml），模拟玻璃边缘折光
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="22dp" />
+    <gradient
+        android:angle="315"
+        android:startColor="#8CFBE3F1"
+        android:centerColor="#8CEFE6FA"
+        android:endColor="#8CD9ECFD"
+        android:type="linear" />
+</shape>

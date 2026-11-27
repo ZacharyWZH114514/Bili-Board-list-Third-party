@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.font.FontWeight
@@ -354,6 +355,8 @@ private fun ActionsSection(
     onToggleFavorite: () -> Unit,
     uriHandler: UriHandler,
 ) {
+    // 「B站观看」要拉起 B 站 App，需要 Context（不是在 Screen 那一层）
+    val context = LocalContext.current
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -370,7 +373,8 @@ private fun ActionsSection(
             dark = dark,
             icon = Icons.Filled.PlayArrow,
             label = "B站观看",
-            onClick = { runCatching { uriHandler.openUri("https://www.bilibili.com/video/$bvid") } },
+            // 优先直接拉起 B 站 App（bilibili://video/...），没装才退浏览器
+            onClick = { BiliLink.open(context, bvid) },
             modifier = Modifier.weight(1f),
         )
         GlassActionButton(

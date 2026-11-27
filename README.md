@@ -8,7 +8,7 @@ Built with Jetpack Compose and a Liquid Glass look.
 The app ships with a bundled snapshot of the chart data, so it opens instantly and works offline.
 It refreshes **incrementally once every 3 days**.
 
-> Package `za.bilbd.app` · version `4.3` · minSdk 26 · targetSdk 37
+> Package `za.bilbd.app` · version `6.2` · minSdk 26 · targetSdk 37
 
 ---
 
@@ -178,6 +178,7 @@ to the AI provider the user chose.
 - **Follow-up chat**: the prompt that produced the analysis is cached and reused as the system message,
   so follow-up answers stay grounded in the same material instead of drifting.
 - **Persona mode**: an optional toggle that changes tone only — the accuracy constraints stay in the prompt.
+- **Home screen widget**: a 4×2 card showing the latest weekly issue's top three (rank / title / producer / views). Tapping it opens the app. It never touches the network or parses the snapshot — the app writes a small cache and the widget just renders it.
 - **In-app log**: operations are logged locally and can be exported as a `.txt` from Settings.
 
 ---

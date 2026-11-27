@@ -25,6 +25,7 @@ import za.bilbd.app.data.FavoritesCodec
 import za.bilbd.app.data.FavoritesStore
 import za.bilbd.app.data.FollowStore
 import za.bilbd.app.data.Issue
+import androidx.glance.appwidget.updateAll
 import za.bilbd.app.data.RepoState
 import za.bilbd.app.data.NewIssueScheduler
 import za.bilbd.app.data.SearchMode
@@ -39,6 +40,11 @@ import za.bilbd.app.data.WebSource
 import za.bilbd.app.data.buildIssuePrompt
 import za.bilbd.app.data.buildSongPrompt
 import za.bilbd.app.data.buildSongSearchQuery
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.drop
+import za.bilbd.app.data.WidgetSnapshot
+import za.bilbd.app.widget.WidgetRefresher
 
 /** AI 分析某个页面的状态 */
 sealed interface AiUiState {
@@ -96,6 +102,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val biliVideos: StateFlow<Map<String, BiliVideo>> = bili.videos
     val aiConfig: StateFlow<AiConfig> = settings.ai
 
+    /** 小组件显示哪个榜（1 = 周榜，2 = 传说曲周榜） */
+    val widgetBoardId: StateFlow<Int> = settings.widgetBoardId
+
+    fun setWidgetBoard(boardId: Int) {
+        settings.setWidgetBoard(boardId)
+    }
+
+    /** 小组件显示几条：0 = 跟随尺寸自动 */
+    val widgetRows: StateFlow<Int> = settings.widgetRows
+
+    fun setWidgetRows(rows: Int) {
+        settings.setWidgetRows(rows)
+        za.bilbd.app.data.WidgetStore.saveRows(getApplication(), rows)
+        // 行数只影响小组件自己怎么画，数据不用重算，直接让它重绘
+        viewModelScope.launch {
+            za.bilbd.app.widget.ChartWidget().updateAll(getApplication())
+        }
+    }
+
     /** 新一期提醒开关 */
     val newIssueAlert: StateFlow<Boolean> = settings.newIssueAlert
 
@@ -126,6 +151,39 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     init {
         // 串成一条链：先出榜单快照（首屏要靠它），再后台补曲库，最后看要不要联网更新。
         // 之前是三个 launch 各调一次 loadBundled()，虽然互斥锁保证只做一次，但白等了两次。
+        // 数据一就绪就把小组件要显示的那几行算好、存起来并推给桌面。
+        // 只认 snapshot 的变化：loading/updating 这些状态变来变去，不该触发重绘。
+        viewModelScope.launch {
+            repo.state.map { it.snapshot }.distinctUntilChanged().collect { snap ->
+                val widget = WidgetSnapshot.build(
+                    snapshot = snap,
+                    dateOffsetDays = settings.dateOffsetDays.value,
+                    boardId = settings.widgetBoardId.value,
+                ) ?: return@collect
+                WidgetRefresher.refresh(app, widget)
+            }
+        }
+        // 换了榜（周榜 / 传说曲周榜）立刻重算
+        viewModelScope.launch {
+            settings.widgetBoardId.drop(1).collect { id ->
+                val widget = WidgetSnapshot.build(
+                    repo.state.value.snapshot,
+                    settings.dateOffsetDays.value,
+                    id,
+                ) ?: return@collect
+                WidgetRefresher.refresh(app, widget)
+            }
+        }
+        // 日期偏移改了，小组件上的日期也得跟着变
+        viewModelScope.launch {
+            settings.dateOffsetDays.drop(1).collect { days ->
+                val widget = WidgetSnapshot.build(
+                    repo.state.value.snapshot, days, settings.widgetBoardId.value
+                ) ?: return@collect
+                WidgetRefresher.refresh(app, widget)
+            }
+        }
+
         viewModelScope.launch {
             repo.loadBundled()
             repo.ensureCatalog()

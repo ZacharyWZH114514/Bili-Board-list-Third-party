@@ -1,12 +1,16 @@
-# Build helper for the BiliBoard Android app.
+﻿# Build helper for the BiliBoard Android app.
 # Ensures JDK 21 + Gradle 9.8.1 are used (the java on PATH is 1.8, unusable for AGP),
 # and redirects GRADLE_USER_HOME / TEMP into the project because this machine's
 # default locations are rejected for build subprocesses.
 #
 # Usage: powershell -File build.ps1 -Task ":app:assembleDebug"
 
+# 额外参数走 -ExtraArgs（例如 -ExtraArgs "-x",":app:testDebugUnitTest"）。
+# 这里不写行内注释：Windows PowerShell 5.1 在 param() 里混入非 ASCII 注释时，
+# 参数绑定会莫名失效（实测 -Task 绑不上，gradle 收到的任务名是空的）。
 param(
     [string]$Task = "assembleDebug",
+    [string[]]$ExtraArgs = @(),
     [switch]$Clean,
     [switch]$Info,
     [switch]$Stacktrace
@@ -39,7 +43,10 @@ New-Item -ItemType Directory -Force -Path $env:TMP | Out-Null
 $env:ANDROID_USER_HOME = Join-Path $ProjectRoot ".android-home"
 New-Item -ItemType Directory -Force -Path $env:ANDROID_USER_HOME | Out-Null
 
-$gradleArgs = @($Task, "--console=plain")
+# 注意别用字符串拼接构造参数：只有一个元素时 PowerShell 会把数组退化成字符串，
+# 拼出来的 "testDebugUnitTest--console=plain" 这种鬼东西直接把任务名毁掉（踩过两次）。
+# 要额外参数就显式走 -ExtraArgs，全程保持数组。
+$gradleArgs = @($Task) + @($ExtraArgs) + @("--console=plain")
 if ($Clean)      { $gradleArgs = @("clean") + $gradleArgs }
 if ($Info)       { $gradleArgs += "--info" }
 if ($Stacktrace) { $gradleArgs += "--stacktrace" }

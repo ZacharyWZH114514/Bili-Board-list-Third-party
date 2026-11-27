@@ -239,6 +239,7 @@ HTTP 用 JDK 自带的 `HttpURLConnection` 而不是 OkHttp：应用只是通过
 | 关于 | 上半屏是应用图标、名称、作者（Zachary & 大肥鱼）与版本号；下半屏是应用说明与数据来源（biliboard.uk，可一键打开） |
 | 应用图标 | 从「设置 → 更改图标」或「关于」页的图标进入：6 套预设配色（切换真实启动图标）+ 用自定义图片创建桌面入口 |
 | 设置 | 顶栏齿轮进入：关于 / 更改图标 / 自定义更新时间 / 外观 / **周榜日期偏移** / **新一期提醒** / AI 分析 / 日志 |
+| 桌面小组件 | 4×2 起，显示周榜最新一期的前三名（名次 / 曲名 / P主 / 播放量），点一下打开 App。小组件不联网、不解析快照，只读 App 算好的一小段缓存，桌面不会卡 |
 
 ## 构建期硬规则
 
@@ -474,8 +475,8 @@ node tools/3-prepare-assets.cjs     # 精简并写入 app/src/main/assets/
 | 项 | 值 |
 |---|---|
 | 包名 / namespace | `za.bilbd.app`（debug 构建自动加 `.debug` 后缀） |
-| 版本名 | `4.3` |
-| versionCode | `4300` |
+| 版本名 | `6.2` |
+| versionCode | `6200` |
 | minSdk | 26（Android 8.0） |
 | targetSdk / compileSdk | 37 / 37.1（Android 17） |
 | ABI | arm64-v8a、armeabi-v7a、x86、x86_64（四种都打进去了，手机平板通用） |
@@ -602,7 +603,7 @@ powershell -File build.ps1 -Task ":app:assembleRelease"   # 发布包（用 debu
 | 1600×2560 @320dpi（800×1280dp → Medium） | 首页 | 侧边导航栏生效；卡片回到纵向堆叠；内容居中限宽 700dp |
 | 1080×2424 @420dpi（411×924dp → Compact） | 首页 | 底部导航栏、单栏铺满，与适配前一致 |
 
-截图见 `shots/`（`9x-pad-*.png` 为平板，`97-phone-home.png` 为手机回归）。
+截图（手机 / 平板两套回归图）没有进仓库：体积大且与代码无关，需要时本地渲染即可。
 
 **封面主题色**（实测三首不同配色的封面）
 

@@ -84,6 +84,10 @@ fun SettingsScreen(
     onDateOffsetChange: (Int) -> Unit = {},
     newIssueAlert: Boolean = false,
     onNewIssueAlertChange: (Boolean) -> Unit = {},
+    widgetBoardId: Int = 1,
+    onWidgetBoardChange: (Int) -> Unit = {},
+    widgetRows: Int = 0,
+    onWidgetRowsChange: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -239,6 +243,41 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
+        }
+
+        // 桌面小组件显示哪个榜
+        GlassSurface(
+            dark = dark,
+            shape = RoundedCornerShape(20.dp),
+            contentPadding = PaddingValues(16.dp),
+            modifier = Modifier.cascade(3).fillMaxWidth(),
+        ) {
+            SectionTitle("桌面小组件")
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "桌面上那个小卡片显示哪个榜的最新一期。改完会立即刷新，不用重新添加。",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                WidgetBoardChip("周榜", widgetBoardId == 1) { onWidgetBoardChange(1) }
+                WidgetBoardChip("传说曲周榜", widgetBoardId == 2) { onWidgetBoardChange(2) }
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(
+                text = "显示条数（有些桌面不上报格子大小，自动会一直是 3 条，这时手动选）",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                WidgetBoardChip("自动", widgetRows == 0) { onWidgetRowsChange(0) }
+                WidgetBoardChip("3 条", widgetRows == 3) { onWidgetRowsChange(3) }
+                WidgetBoardChip("5 条", widgetRows == 5) { onWidgetRowsChange(5) }
+                WidgetBoardChip("10 条", widgetRows == 10) { onWidgetRowsChange(10) }
+                WidgetBoardChip("15 条", widgetRows == 15) { onWidgetRowsChange(15) }
+            }
         }
 
         // 新一期提醒：后台由 WorkManager 定时看一眼，有新一轮就发通知
@@ -587,6 +626,25 @@ private fun ThemeChip(
     }
 }
 
+
+
+/** 小组件选榜用的小胶囊 */
+@Composable
+private fun WidgetBoardChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+    val fg = if (selected) MaterialTheme.colorScheme.primary
+    else MaterialTheme.colorScheme.onSurfaceVariant
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp)
+    ) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = fg, maxLines = 1)
+    }
+}
 
 /** Android 13 以下默认有通知权限；13+ 要运行时申请 */
 @Composable

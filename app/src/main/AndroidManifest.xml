@@ -142,6 +142,22 @@
                 android:resource="@xml/keep_alive_service" />
         </service>
 
+    
+        <!-- 桌面小组件：显示周榜最新一期前三名。
+             exported 必须是 true —— 桌面的 AppWidgetHost 在别的进程里，
+             要能通过这个组件名找到我们。 -->
+        <receiver
+            android:name=".widget.ChartWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/chart_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>

@@ -286,6 +286,9 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
     val dateOffsetDays by vm.dateOffsetDays.collectAsStateWithLifecycle()
     // 新一期提醒开关
     val newIssueAlert by vm.newIssueAlert.collectAsStateWithLifecycle()
+    // 小组件显示哪个榜 / 显示几条
+    val widgetBoardId by vm.widgetBoardId.collectAsStateWithLifecycle()
+    val widgetRows by vm.widgetRows.collectAsStateWithLifecycle()
     // 当前生效的图标配色（用户可在「关于 → 应用图标」里切换）
     val iconId by AppIconState.currentId.collectAsStateWithLifecycle()
 
@@ -669,6 +672,10 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
                                     onDateOffsetChange = vm::setDateOffsetDays,
                                     newIssueAlert = newIssueAlert,
                                     onNewIssueAlertChange = vm::setNewIssueAlert,
+                                    widgetBoardId = widgetBoardId,
+                                    onWidgetBoardChange = vm::setWidgetBoard,
+                                    widgetRows = widgetRows,
+                                    onWidgetRowsChange = vm::setWidgetRows,
                                 )
 
                                 is Screen.AiSettings -> AiSettingsScreen(
